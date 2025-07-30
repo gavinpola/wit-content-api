@@ -1,1 +1,1 @@
-web: python railway_deploy.py 
+web: python simple_server.py 

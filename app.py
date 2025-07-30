@@ -3,7 +3,7 @@
 Main application entry point for Railway deployment
 """
 
-from railway_deploy import app
+from simple_server import app
 import os
 
 if __name__ == '__main__':

@@ -95,6 +95,26 @@ def generate_bulk_questions():
             'expert': 0.1
         })
         
+        # Handle case where domains and difficulty_distribution come as JSON strings from n8n
+        if isinstance(domains, str):
+            try:
+                import json
+                domains = json.loads(domains)
+            except:
+                domains = ['quant', 'verbal', 'spatial', 'logic', 'data']
+        
+        if isinstance(difficulty_distribution, str):
+            try:
+                import json
+                difficulty_distribution = json.loads(difficulty_distribution)
+            except:
+                difficulty_distribution = {
+                    'basic': 0.3,
+                    'intermediate': 0.4,
+                    'advanced': 0.2,
+                    'expert': 0.1
+                }
+        
         all_questions = []
         
         for domain in domains:
@@ -122,6 +142,13 @@ def generate_daily_challenges_bulk():
         data = request.get_json()
         start_date = data.get('start_date', datetime.now().strftime('%Y-%m-%d'))
         days = data.get('days', 730)  # 2 years
+        
+        # Handle case where days comes as a string from n8n
+        if isinstance(days, str):
+            try:
+                days = int(days)
+            except:
+                days = 730
         
         challenges = []
         current_date = datetime.strptime(start_date, '%Y-%m-%d')

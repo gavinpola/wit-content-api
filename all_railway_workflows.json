@@ -1,0 +1,551 @@
+{
+  "meta": {
+    "instanceId": "railway-deployment"
+  },
+  "workflows": [
+    {
+      "name": "Wit Basic Question Generator (Railway)",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "hour",
+                  "value": 2
+                }
+              ]
+            }
+          },
+          "id": "schedule-trigger-1",
+          "name": "Schedule Trigger",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1,
+          "position": [240, 300]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://web-production-9dfd.up.railway.app/generate-questions",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "domain",
+                  "value": "quant"
+                },
+                {
+                  "name": "count",
+                  "value": 50
+                },
+                {
+                  "name": "difficulty_range",
+                  "value": "intermediate"
+                },
+                {
+                  "name": "source",
+                  "value": "n8n_workflow"
+                }
+              ]
+            }
+          },
+          "id": "http-request-1",
+          "name": "HTTP Request",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [460, 300]
+        },
+        {
+          "parameters": {
+            "operation": "create",
+            "table": "questions",
+            "dataToSend": "={{ $json.questions }}"
+          },
+          "id": "supabase-create-1",
+          "name": "Supabase Create",
+          "type": "n8n-nodes-base.supabase",
+          "typeVersion": 1,
+          "position": [680, 300]
+        }
+      ],
+      "connections": {
+        "Schedule Trigger": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request": {
+          "main": [
+            [
+              {
+                "node": "Supabase Create",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": false,
+      "settings": {},
+      "versionId": "1"
+    },
+    {
+      "name": "Wit Bulk Question Generator (Railway)",
+      "nodes": [
+        {
+          "parameters": {},
+          "id": "manual-trigger-2",
+          "name": "Manual Trigger",
+          "type": "n8n-nodes-base.manualTrigger",
+          "typeVersion": 1,
+          "position": [240, 300]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://web-production-9dfd.up.railway.app/generate-bulk-questions",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "domains",
+                  "value": "[\"quant\", \"verbal\", \"spatial\", \"logic\", \"data\"]"
+                },
+                {
+                  "name": "questions_per_domain",
+                  "value": 2000
+                },
+                {
+                  "name": "difficulty_distribution",
+                  "value": "{\"basic\": 0.3, \"intermediate\": 0.4, \"advanced\": 0.2, \"expert\": 0.1}"
+                }
+              ]
+            }
+          },
+          "id": "http-request-2",
+          "name": "HTTP Request",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [460, 300]
+        },
+        {
+          "parameters": {
+            "batchSize": 100
+          },
+          "id": "split-batches-2",
+          "name": "Split In Batches",
+          "type": "n8n-nodes-base.splitInBatches",
+          "typeVersion": 3,
+          "position": [680, 300]
+        },
+        {
+          "parameters": {
+            "operation": "create",
+            "table": "questions",
+            "dataToSend": "={{ $json }}"
+          },
+          "id": "supabase-create-2",
+          "name": "Supabase Create",
+          "type": "n8n-nodes-base.supabase",
+          "typeVersion": 1,
+          "position": [900, 300]
+        }
+      ],
+      "connections": {
+        "Manual Trigger": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request": {
+          "main": [
+            [
+              {
+                "node": "Split In Batches",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Split In Batches": {
+          "main": [
+            [
+              {
+                "node": "Supabase Create",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": false,
+      "settings": {},
+      "versionId": "1"
+    },
+    {
+      "name": "Wit Daily Challenge Generator (Railway)",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "hour",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "id": "schedule-trigger-3",
+          "name": "Schedule Trigger",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1,
+          "position": [240, 300]
+        },
+        {
+          "parameters": {
+            "jsCode": "// Get tomorrow's date for the daily challenge\nconst tomorrow = new Date();\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst dateString = tomorrow.toISOString().split('T')[0];\n\nreturn {\n  date: dateString,\n  type: 'auto'\n};"
+          },
+          "id": "code-node-3",
+          "name": "Code",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [460, 300]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://web-production-9dfd.up.railway.app/generate-daily-challenge",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "date",
+                  "value": "={{ $json.date }}"
+                },
+                {
+                  "name": "type",
+                  "value": "={{ $json.type }}"
+                }
+              ]
+            }
+          },
+          "id": "http-request-3",
+          "name": "HTTP Request",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [680, 300]
+        },
+        {
+          "parameters": {
+            "operation": "create",
+            "table": "questions",
+            "dataToSend": "={{ $json.challenge }}"
+          },
+          "id": "supabase-create-3",
+          "name": "Supabase Create",
+          "type": "n8n-nodes-base.supabase",
+          "typeVersion": 1,
+          "position": [900, 300]
+        }
+      ],
+      "connections": {
+        "Schedule Trigger": {
+          "main": [
+            [
+              {
+                "node": "Code",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Code": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request": {
+          "main": [
+            [
+              {
+                "node": "Supabase Create",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": false,
+      "settings": {},
+      "versionId": "1"
+    },
+    {
+      "name": "Wit Bulk Daily Challenges Generator (Railway)",
+      "nodes": [
+        {
+          "parameters": {},
+          "id": "manual-trigger-4",
+          "name": "Manual Trigger",
+          "type": "n8n-nodes-base.manualTrigger",
+          "typeVersion": 1,
+          "position": [240, 300]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://web-production-9dfd.up.railway.app/generate-daily-challenges-bulk",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "start_date",
+                  "value": "2024-01-01"
+                },
+                {
+                  "name": "days",
+                  "value": 730
+                }
+              ]
+            }
+          },
+          "id": "http-request-4",
+          "name": "HTTP Request",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [460, 300]
+        },
+        {
+          "parameters": {
+            "batchSize": 50
+          },
+          "id": "split-batches-4",
+          "name": "Split In Batches",
+          "type": "n8n-nodes-base.splitInBatches",
+          "typeVersion": 3,
+          "position": [680, 300]
+        },
+        {
+          "parameters": {
+            "operation": "create",
+            "table": "questions",
+            "dataToSend": "={{ $json }}"
+          },
+          "id": "supabase-create-4",
+          "name": "Supabase Create",
+          "type": "n8n-nodes-base.supabase",
+          "typeVersion": 1,
+          "position": [900, 300]
+        }
+      ],
+      "connections": {
+        "Manual Trigger": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "HTTP Request": {
+          "main": [
+            [
+              {
+                "node": "Split In Batches",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Split In Batches": {
+          "main": [
+            [
+              {
+                "node": "Supabase Create",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": false,
+      "settings": {},
+      "versionId": "1"
+    },
+    {
+      "name": "Wit Progress Monitor (Railway)",
+      "nodes": [
+        {
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "hour",
+                  "value": 6
+                }
+              ]
+            }
+          },
+          "id": "schedule-trigger-5",
+          "name": "Schedule Trigger",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1,
+          "position": [240, 300]
+        },
+        {
+          "parameters": {
+            "operation": "read",
+            "table": "questions",
+            "returnAll": true
+          },
+          "id": "supabase-read-5",
+          "name": "Supabase Read",
+          "type": "n8n-nodes-base.supabase",
+          "typeVersion": 1,
+          "position": [460, 300]
+        },
+        {
+          "parameters": {
+            "jsCode": "// Count questions by domain and source\nconst questions = $input.all();\nconst stats = {\n  total: questions.length,\n  by_domain: {},\n  by_source: {},\n  daily_challenges: 0,\n  regular_questions: 0\n};\n\nquestions.forEach(q => {\n  // Count by domain\n  stats.by_domain[q.domain] = (stats.by_domain[q.domain] || 0) + 1;\n  \n  // Count by source\n  stats.by_source[q.source] = (stats.by_source[q.source] || 0) + 1;\n  \n  // Count daily challenges\n  if (q.source === 'daily_challenge' || (q.metadata && q.metadata.is_daily_challenge)) {\n    stats.daily_challenges++;\n  } else {\n    stats.regular_questions++;\n  }\n});\n\n// Calculate progress toward 10k goal\nconst progress = (stats.regular_questions / 10000) * 100;\n\nreturn {\n  stats,\n  progress_percentage: Math.round(progress * 100) / 100,\n  remaining_questions: 10000 - stats.regular_questions,\n  timestamp: new Date().toISOString()\n};"
+          },
+          "id": "code-node-5",
+          "name": "Code",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [680, 300]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://web-production-9dfd.up.railway.app/validate",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "bodyParameters": {
+              "parameters": [
+                {
+                  "name": "questions",
+                  "value": "={{ $json.stats }}"
+                }
+              ]
+            }
+          },
+          "id": "http-request-5",
+          "name": "HTTP Request",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [900, 300]
+        }
+      ],
+      "connections": {
+        "Schedule Trigger": {
+          "main": [
+            [
+              {
+                "node": "Supabase Read",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Supabase Read": {
+          "main": [
+            [
+              {
+                "node": "Code",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Code": {
+          "main": [
+            [
+              {
+                "node": "HTTP Request",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": false,
+      "settings": {},
+      "versionId": "1"
+    }
+  ]
+} 

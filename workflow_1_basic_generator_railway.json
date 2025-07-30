@@ -1,0 +1,111 @@
+{
+  "name": "Wit Basic Question Generator (Railway)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-production-9dfd.up.railway.app/generate-questions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "domain",
+              "value": "quant"
+            },
+            {
+              "name": "count",
+              "value": 50
+            },
+            {
+              "name": "difficulty_range",
+              "value": "intermediate"
+            },
+            {
+              "name": "source",
+              "value": "n8n_workflow"
+            }
+          ]
+        }
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "questions",
+        "dataToSend": "={{ $json.questions }}"
+      },
+      "id": "supabase-create",
+      "name": "Supabase Create",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Supabase Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+} 

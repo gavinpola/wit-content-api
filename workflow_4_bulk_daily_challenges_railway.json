@@ -1,0 +1,118 @@
+{
+  "name": "Wit Bulk Daily Challenges Generator (Railway)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-production-9dfd.up.railway.app/generate-daily-challenges-bulk",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "start_date",
+              "value": "2024-01-01"
+            },
+            {
+              "name": "days",
+              "value": 730
+            }
+          ]
+        }
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 50
+      },
+      "id": "split-batches",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "questions",
+        "dataToSend": "={{ $json }}"
+      },
+      "id": "supabase-create",
+      "name": "Supabase Create",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Supabase Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+} 

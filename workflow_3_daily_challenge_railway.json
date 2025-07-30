@@ -1,0 +1,127 @@
+{
+  "name": "Wit Daily Challenge Generator (Railway)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get tomorrow's date for the daily challenge\nconst tomorrow = new Date();\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst dateString = tomorrow.toISOString().split('T')[0];\n\nreturn {\n  date: dateString,\n  type: 'auto'\n};"
+      },
+      "id": "code-node",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-production-9dfd.up.railway.app/generate-daily-challenge",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "date",
+              "value": "={{ $json.date }}"
+            },
+            {
+              "name": "type",
+              "value": "={{ $json.type }}"
+            }
+          ]
+        }
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "questions",
+        "dataToSend": "={{ $json.challenge }}"
+      },
+      "id": "supabase-create",
+      "name": "Supabase Create",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Supabase Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+} 

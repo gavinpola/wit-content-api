@@ -1,0 +1,122 @@
+{
+  "name": "Wit Bulk Question Generator (Railway)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-production-9dfd.up.railway.app/generate-bulk-questions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "domains",
+              "value": "[\"quant\", \"verbal\", \"spatial\", \"logic\", \"data\"]"
+            },
+            {
+              "name": "questions_per_domain",
+              "value": 2000
+            },
+            {
+              "name": "difficulty_distribution",
+              "value": "{\"basic\": 0.3, \"intermediate\": 0.4, \"advanced\": 0.2, \"expert\": 0.1}"
+            }
+          ]
+        }
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 100
+      },
+      "id": "split-batches",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "questions",
+        "dataToSend": "={{ $json }}"
+      },
+      "id": "supabase-create",
+      "name": "Supabase Create",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Supabase Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+} 

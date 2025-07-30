@@ -1,0 +1,123 @@
+{
+  "name": "Wit Progress Monitor (Railway)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour",
+              "value": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "table": "questions",
+        "returnAll": true
+      },
+      "id": "supabase-read",
+      "name": "Supabase Read",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Count questions by domain and source\nconst questions = $input.all();\nconst stats = {\n  total: questions.length,\n  by_domain: {},\n  by_source: {},\n  daily_challenges: 0,\n  regular_questions: 0\n};\n\nquestions.forEach(q => {\n  // Count by domain\n  stats.by_domain[q.domain] = (stats.by_domain[q.domain] || 0) + 1;\n  \n  // Count by source\n  stats.by_source[q.source] = (stats.by_source[q.source] || 0) + 1;\n  \n  // Count daily challenges\n  if (q.source === 'daily_challenge' || (q.metadata && q.metadata.is_daily_challenge)) {\n    stats.daily_challenges++;\n  } else {\n    stats.regular_questions++;\n  }\n});\n\n// Calculate progress toward 10k goal\nconst progress = (stats.regular_questions / 10000) * 100;\n\nreturn {\n  stats,\n  progress_percentage: Math.round(progress * 100) / 100,\n  remaining_questions: 10000 - stats.regular_questions,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "code-node",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://web-production-9dfd.up.railway.app/validate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "questions",
+              "value": "={{ $json.stats }}"
+            }
+          ]
+        }
+      },
+      "id": "http-request",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Supabase Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Read": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+} 
